@@ -5,6 +5,7 @@ from game import Game
 
 running = True
 seenMatches = []
+logged_presence_example = False
 
 print('Valorant Stream Yoinker by https://github.com/deadly')
 
@@ -34,10 +35,29 @@ print("Waiting for a match to begin")
 while (running):
     time.sleep(stateInterval)
     try:
-        sessionState = client.fetch_presence(client.puuid)['sessionLoopState']
+        presence = client.fetch_presence(client.puuid)
+
+        # Log complet de la présence une seule fois pour inspection
+        if not logged_presence_example:
+            print("Presence brut:", presence)
+            logged_presence_example = True
+
+        # Nouveau format : l'état de session est dans matchPresenceData / partyPresenceData
+        match_presence = presence.get('matchPresenceData', {}) or {}
+        party_presence = presence.get('partyPresenceData', {}) or {}
+
+        sessionState = match_presence.get('sessionLoopState')
+        if sessionState is None:
+            # fallback: état du owner de la party
+            sessionState = party_presence.get('partyOwnerSessionLoopState')
+
+        if sessionState is None:
+            # Clé absente, on ignore ce tour de boucle
+            continue
+
         matchID = client.coregame_fetch_player()['MatchID']
 
-        if (sessionState == "PREGAME" or "INGAME" and matchID not in seenMatches):
+        if sessionState in ("PREGAME", "INGAME") and matchID not in seenMatches:
             print('-'*55)
             print("Match detected")
             seenMatches.append(matchID)
@@ -62,6 +82,11 @@ while (running):
                         team=player['TeamID']
                     ))
             
+            # Affichage de la liste complète des joueurs
+            print("\nPlayers in match:")
+            for p in [localPlayer] + players:
+                print(f"{p.full_name} - {p.team} {p.agent}")
+
             currentGame = Game(party=client.fetch_party(), matchID=matchID, players=players, localPlayer=localPlayer)
             print("\nFinding hidden names\n")
             currentGame.find_hidden_names(players)
