@@ -3,6 +3,6 @@
     "stateInterval": 30,
     "twitchReqDelay": 3.5,
     "ran": true,
-    "skipTeamPlayers": false,
-    "skipPartyPlayers": false
+    "skipTeamPlayers": true,
+    "skipPartyPlayers": true
 }
